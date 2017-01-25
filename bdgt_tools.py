@@ -117,8 +117,7 @@ def combine(table_list, amount_col="Amount", balance_col="Balance",
 
 
 def slice_categories(table, balance_col="Balance", amount_col="Amount",
-                     category_col="Category", uncategorized="Uncategorized",
-                     condense="D"):
+                     category_col="Category", uncategorized="Uncategorized"):
     """re-starts all the balances; return initial balance
     handle missing categories
     collapse transfers
@@ -145,19 +144,14 @@ def slice_categories(table, balance_col="Balance", amount_col="Amount",
         # get rid of the category column and name the table
         new_tab = new_tab.drop(category_col, 1)
 
-        #print "input table: %s" % cat
-        #print new_tab
-        if condense:
-            new_tab = new_tab.resample(condense, how='sum').dropna()
+        new_tab = new_tab.groupby(new_tab.index).sum()
+        #new_tab = new_tab.resample("D", how='sum').dropna()
 
         new_tab[balance_col][0] = np.nan
         new_tab = rebalance(new_tab, amount_col=amount_col,
                             balance_col=balance_col)
 
         new_tab.name = cat
-
-        #print "after proc: %s" % cat
-        #print new_tab
 
         split_cats.append(new_tab.copy())
 
@@ -173,7 +167,7 @@ def sort_dict_on_value(dict_in):
     return dsort
 
 
-def plot_wedges(idx, cat_list, split_cats, title="Budget wedges"):
+def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
     """Show cumulative input and output broken down by category
     """
     # First distinguish between income and spending
@@ -207,10 +201,8 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges"):
     for entry, cname in enumerate(sorted_spending):
         spend = spending[cname]
         name = spend.name
-        try:
-            data = spend.reindex(idx, method="pad")
-        except ValueError:
-            pass
+        print entry, cname, name
+        data = spend.reindex(idx, method="pad")
 
         data["Balance"].fillna(0, inplace=True)
 
@@ -218,7 +210,7 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges"):
         lwr = start
         upr = start + cost
         plt.fill_between(data.index, lwr, upr, linewidth=0,
-                         facecolor=color[entry], alpha=.3, label=name)
+                         facecolor=color[entry], alpha=alpha, label=name)
 
         lwr += cost
 
@@ -233,10 +225,7 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges"):
     for entry, cname in enumerate(sorted_income):
         inc = income[cname]
         name = inc.name
-        try:
-            data = inc.reindex(idx, method="pad")
-        except ValueError:
-            pass
+        data = inc.reindex(idx, method="pad")
 
         data["Balance"].fillna(0, inplace=True)
 
@@ -253,6 +242,11 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges"):
                      label="total income")
 
     fig.autofmt_xdate()
+    ax.yaxis.tick_right()
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_right()
 
     handles, labels = ax.get_legend_handles_labels()
     lgd = ax.legend(handles, labels, loc='upper center',
