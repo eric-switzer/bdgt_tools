@@ -207,7 +207,11 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges"):
     for entry, cname in enumerate(sorted_spending):
         spend = spending[cname]
         name = spend.name
-        data = spend.reindex(idx, method="pad")
+        try:
+            data = spend.reindex(idx, method="pad")
+        except ValueError:
+            pass
+
         data["Balance"].fillna(0, inplace=True)
 
         cost = -data["Balance"]
@@ -218,8 +222,9 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges"):
 
         lwr += cost
 
-    ax.plot_date(data.index, upr, "-", linewidth=2, color="red",
-                 label="total spending")
+    if len(sorted_spending) > 0:
+        ax.plot_date(data.index, upr, "-", linewidth=2, color="red",
+                     label="total spending")
 
     n_income = len(income)
     color = cm.rainbow(np.linspace(0, 1, n_income))
@@ -228,7 +233,11 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges"):
     for entry, cname in enumerate(sorted_income):
         inc = income[cname]
         name = inc.name
-        data = inc.reindex(idx, method="pad")
+        try:
+            data = inc.reindex(idx, method="pad")
+        except ValueError:
+            pass
+
         data["Balance"].fillna(0, inplace=True)
 
         cost = data["Balance"]
@@ -239,8 +248,9 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges"):
 
         lwr += cost
 
-    ax.plot_date(data.index, upr, "-", linewidth=2, color="black",
-                 label="total income")
+    if len(sorted_income) > 0:
+        ax.plot_date(data.index, upr, "-", linewidth=2, color="black",
+                     label="total income")
 
     fig.autofmt_xdate()
 
