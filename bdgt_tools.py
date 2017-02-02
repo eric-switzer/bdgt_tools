@@ -1,11 +1,64 @@
 """
 Utilities for managing a budget
 """
+import copy
 import operator
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
+
+
+def rebin(dict_in, total, precision=1.):
+    """Take a dictionary of values and convert them to sum to a new value with
+    given precision.
+
+    Use: converting billable hours into more round units with fixed total time.
+    """
+    (keys, values) = zip(*dict_in.iteritems())
+    values = np.array(values)
+    values *= total / np.sum(values) / precision
+    array_sum = np.sum(values)
+
+    lower = 0
+    result = np.zeros_like(values)
+    diff = np.zeros_like(values)
+    result = np.zeros_like(values)
+    for ind, val in enumerate(values):
+        result[ind] = np.floor(val)
+        diff[ind] = val - result[ind]
+        lower += result[ind]
+
+    difference = int(array_sum - lower)
+    inc_ind = np.argpartition(diff, -difference)[-difference:]
+    result[inc_ind] += 1
+
+    result *= precision
+
+    dict_out = dict(zip(keys, result))
+    return dict_out
+
+
+def spread(time_in, name, spread_to):
+    """Take a dictionary of values and spread it to other entries.
+    Use: distributing a task (e.g. mgmt) over all grants
+    """
+    time_out = copy.copy(time_in)
+    nreal = len(spread_to)
+
+    time_spread = time_in[name] / float(nreal)
+    for entry in spread_to:
+        time_out[entry] += time_spread
+
+    del time_out[name]
+    return time_out
+
+
+def print_dict(dict_in, fmt="%d"):
+    (keys, values) = zip(*dict_in.iteritems())
+    for key in sorted(keys):
+        fmt_str = "%s: %s" % (key, fmt)
+        print fmt_str % dict_in[key]
 
 
 def first_transaction(table, amount_col="Amount"):
@@ -192,7 +245,7 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
     print "sorted income: ", sorted_income
     print "sorted spending: ", sorted_spending
 
-    fig, ax = plt.subplots(figsize=(10,7))
+    fig, ax = plt.subplots(figsize=(10, 7))
 
     n_spend = len(spending)
     color = cm.rainbow(np.linspace(0, 1, n_spend))
@@ -201,6 +254,8 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
     for entry, cname in enumerate(sorted_spending):
         spend = spending[cname]
         name = spend.name
+        name += "=%.2g" % -(spending_final[cname])
+
         print entry, cname, name
         data = spend.reindex(idx, method="pad")
 
@@ -225,6 +280,7 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
     for entry, cname in enumerate(sorted_income):
         inc = income[cname]
         name = inc.name
+        name += "=%.2g" % (income_final[cname])
         data = inc.reindex(idx, method="pad")
 
         data["Balance"].fillna(0, inplace=True)
@@ -249,8 +305,8 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
     ax.get_yaxis().tick_right()
 
     handles, labels = ax.get_legend_handles_labels()
-    lgd = ax.legend(handles, labels, loc='upper center',
-                    bbox_to_anchor=(0.5, -0.2), ncol=3)
+    ax.legend(handles, labels, loc='upper center',
+              bbox_to_anchor=(0.5, -0.2), ncol=3)
 
     plt.title(title)
 
