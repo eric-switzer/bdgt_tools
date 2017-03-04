@@ -103,7 +103,7 @@ def rebalance(table, amount_col="Amount", balance_col="Balance"):
     starting = starting_balance(table, amount_col=amount_col,
                                 balance_col=balance_col)
 
-    print "Rebalance starting with ", starting
+    #print "Rebalance starting with ", starting
 
     output[balance_col] = table[amount_col].cumsum() + starting
 
@@ -177,36 +177,38 @@ def slice_categories(table, balance_col="Balance", amount_col="Amount",
     categorize groups as either income or loss
     """
     # fill any categories with Uncategorized
-    input_tab = table.copy()
-    input_tab[category_col] = table[category_col].fillna(uncategorized)
+    df = table.copy()
+    df[category_col] = table[category_col].fillna(uncategorized)
 
-    start = starting_balance(input_tab, amount_col=amount_col,
+    if balance_col not in df.columns:
+        print "missing %s" % balance_col
+        df[balance_col] = 0.
+
+    start = starting_balance(df, amount_col=amount_col,
                              balance_col=balance_col)
 
-    print "Starting balance: ", start
-
-    cat_list = input_tab[category_col].tolist()
+    cat_list = df[category_col].tolist()
     cat_list = list(set(cat_list))
     cat_list = [entry.strip() for entry in cat_list]
 
-    print cat_list
+    #print cat_list
     split_cats = []
     for cat in cat_list:
-        #new_tab = input_tab[input_tab[category_col].str.match(cat)]
-        new_tab = input_tab.loc[input_tab[category_col] == cat]
+        #new_df = df[df[category_col].str.match(cat)]
+        new_df = df.loc[df[category_col] == cat]
         # get rid of the category column and name the table
-        new_tab = new_tab.drop(category_col, 1)
+        new_df = new_df.drop(category_col, 1)
 
-        new_tab = new_tab.groupby(new_tab.index).sum()
-        #new_tab = new_tab.resample("D", how='sum').dropna()
+        new_df = new_df.groupby(new_df.index).sum()
+        #new_df = new_df.resample("D", how='sum').dropna()
 
-        new_tab[balance_col][0] = np.nan
-        new_tab = rebalance(new_tab, amount_col=amount_col,
+        new_df[balance_col][0] = np.nan
+        new_df = rebalance(new_df, amount_col=amount_col,
                             balance_col=balance_col)
 
-        new_tab.name = cat
+        new_df.name = cat
 
-        split_cats.append(new_tab.copy())
+        split_cats.append(new_df.copy())
 
     return cat_list, split_cats
 
@@ -220,7 +222,8 @@ def sort_dict_on_value(dict_in):
     return dsort
 
 
-def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
+def plot_wedges(idx, cat_list, split_cats, title="Budget wedges",
+                alpha=0.3, plot_field="Balance"):
     """Show cumulative input and output broken down by category
     """
     # First distinguish between income and spending
@@ -230,7 +233,7 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
     spending_final = {}
     for cat_name, cat in zip(cat_list, split_cats):
         final_balance = cat["Balance"][-1]
-        print cat_name, final_balance
+        #print cat_name, final_balance
         cat.name = cat_name
         if final_balance > 0:
             income[cat_name] = cat
@@ -256,12 +259,12 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
         name = spend.name
         name += "=%.2g" % -(spending_final[cname])
 
-        print entry, cname, name
+        #print entry, cname, name
         data = spend.reindex(idx, method="pad")
 
-        data["Balance"].fillna(0, inplace=True)
+        data[plot_field].fillna(0, inplace=True)
 
-        cost = -data["Balance"]
+        cost = -data[plot_field]
         lwr = start
         upr = start + cost
         plt.fill_between(data.index, lwr, upr, linewidth=0,
@@ -283,9 +286,9 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
         name += "=%.2g" % (income_final[cname])
         data = inc.reindex(idx, method="pad")
 
-        data["Balance"].fillna(0, inplace=True)
+        data[plot_field].fillna(0, inplace=True)
 
-        cost = data["Balance"]
+        cost = data[plot_field]
         lwr = start
         upr = start + cost
 
