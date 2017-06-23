@@ -220,8 +220,11 @@ def sort_dict_on_value(dict_in):
     return dsort
 
 
-def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
+def plot_wedges(cat_list, split_cats, idx=None, title="Budget wedges", alpha=0.3,
+                cumulative=True, amount_field="Amount", balance_field="Balance"):
     """Show cumulative input and output broken down by category
+    idx is an optional datetimeindex vector over which to plot the data
+    cumulative picks between cumulative and instantaneous spending
     """
     # First distinguish between income and spending
     income = {}
@@ -229,7 +232,7 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
     income_final = {}
     spending_final = {}
     for cat_name, cat in zip(cat_list, split_cats):
-        final_balance = cat["Balance"][-1]
+        final_balance = cat[balance_field][-1]
         print cat_name, final_balance
         cat.name = cat_name
         if final_balance > 0:
@@ -245,10 +248,23 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
     print "sorted income: ", sorted_income
     print "sorted spending: ", sorted_spending
 
+    # if no index is given, determine the time base from the input tables
+    if idx is None:
+        for cat_name, cat in zip(cat_list, split_cats):
+            if idx is None:
+                idx = cat.copy().index
+            else:
+                idx = idx.union(cat.index)
+
     fig, ax = plt.subplots(figsize=(10, 7))
 
     n_spend = len(spending)
     color = cm.rainbow(np.linspace(0, 1, n_spend))
+
+    if cumulative:
+        plot_field = balance_field
+    else:
+        plot_field = amount_field
 
     start = np.zeros(shape=idx.shape)
     for entry, cname in enumerate(sorted_spending):
@@ -257,11 +273,14 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
         name += "=%.2g" % -(spending_final[cname])
 
         print entry, cname, name
-        data = spend.reindex(idx, method="pad")
+        if cumulative:
+            data = spend.reindex(idx, method="pad")
+        else:
+            data = spend.reindex(idx, method=None)
 
-        data["Balance"].fillna(0, inplace=True)
+        data[plot_field].fillna(0, inplace=True)
 
-        cost = -data["Balance"]
+        cost = -data[plot_field]
         lwr = start
         upr = start + cost
         plt.fill_between(data.index, lwr, upr, linewidth=0,
@@ -281,11 +300,15 @@ def plot_wedges(idx, cat_list, split_cats, title="Budget wedges", alpha=0.3):
         inc = income[cname]
         name = inc.name
         name += "=%.2g" % (income_final[cname])
-        data = inc.reindex(idx, method="pad")
 
-        data["Balance"].fillna(0, inplace=True)
+        if cumulative:
+            data = inc.reindex(idx, method="pad")
+        else:
+            data = inc.reindex(idx, method=None)
 
-        cost = data["Balance"]
+        data[plot_field].fillna(0, inplace=True)
+
+        cost = data[plot_field]
         lwr = start
         upr = start + cost
 
