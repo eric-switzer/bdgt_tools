@@ -247,8 +247,8 @@ def plot_wedges(cat_list, split_cats, idx=None, title="Budget wedges", alpha=0.3
 
     sorted_income = sort_dict_on_value(income_final)
     sorted_spending = sort_dict_on_value(spending_final)
-    print "sorted income: ", sorted_income
-    print "sorted spending: ", sorted_spending
+    #print "sorted income: ", sorted_income
+    #print "sorted spending: ", sorted_spending
 
     # if no index is given, determine the time base from the input tables
     if idx is None:
