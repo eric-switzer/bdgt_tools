@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
+#pylint: disable=maybe-no-member
 
 
 def rebin(dict_in, total, precision=1.):
@@ -55,6 +56,7 @@ def spread(time_in, name, spread_to):
 
 
 def print_dict(dict_in, fmt="%d"):
+    """Print a dictionary"""
     (keys, values) = zip(*dict_in.iteritems())
     for key in sorted(keys):
         fmt_str = "%s: %s" % (key, fmt)
@@ -62,8 +64,7 @@ def print_dict(dict_in, fmt="%d"):
 
 
 def first_transaction(table, amount_col="Amount"):
-    """Determine the first transaction
-    """
+    """Determine the first transaction"""
     first_trans = table[amount_col][0]
 
     # if there is no tranaction entry set to zero
@@ -171,7 +172,7 @@ def combine(table_list, amount_col="Amount", balance_col="Balance",
 
 def slice_categories(table, balance_col="Balance", amount_col="Amount",
                      category_col="Category", uncategorized="Uncategorized"):
-    """re-starts all the balances; return initial balance
+    """re-starts all the balances, return initial balance
     handle missing categories
     collapse transfers
     categorize groups as either income or loss
@@ -222,8 +223,9 @@ def sort_dict_on_value(dict_in):
     return dsort
 
 
-def plot_wedges(cat_list, split_cats, idx=None, title="Budget wedges", alpha=0.3,
-                cumulative=True, amount_field="Amount", balance_field="Balance"):
+def plot_wedges(cat_list, split_cats, idx=None, title="Budget wedges",
+                alpha=0.3, cumulative=True, amount_field="Amount",
+                balance_field="Balance"):
     """Show cumulative input and output broken down by category
     idx is an optional datetimeindex vector over which to plot the data
     cumulative picks between cumulative and instantaneous spending
@@ -235,7 +237,6 @@ def plot_wedges(cat_list, split_cats, idx=None, title="Budget wedges", alpha=0.3
     spending_final = {}
     for cat_name, cat in zip(cat_list, split_cats):
         final_balance = cat[balance_field][-1]
-        #print cat_name, final_balance
         cat.name = cat_name
         if final_balance > 0:
             income[cat_name] = cat
@@ -247,8 +248,6 @@ def plot_wedges(cat_list, split_cats, idx=None, title="Budget wedges", alpha=0.3
 
     sorted_income = sort_dict_on_value(income_final)
     sorted_spending = sort_dict_on_value(spending_final)
-    #print "sorted income: ", sorted_income
-    #print "sorted spending: ", sorted_spending
 
     # if no index is given, determine the time base from the input tables
     if idx is None:
@@ -274,7 +273,6 @@ def plot_wedges(cat_list, split_cats, idx=None, title="Budget wedges", alpha=0.3
         name = spend.name
         name += "=%.2g" % -(spending_final[cname])
 
-        #print entry, cname, name
         if cumulative:
             data = spend.reindex(idx, method="pad")
         else:
@@ -288,7 +286,7 @@ def plot_wedges(cat_list, split_cats, idx=None, title="Budget wedges", alpha=0.3
         plt.fill_between(data.index, lwr, upr, linewidth=0,
                          facecolor=color[entry], alpha=alpha, label=name)
 
-        lwr += cost
+        start += cost
 
     if len(sorted_spending) > 0:
         ax.plot_date(data.index, upr, "-", linewidth=2, color="red",
